@@ -5,11 +5,15 @@ using System.Reflection;
 using System.Collections;
 using System.Text;
 using System.Runtime.Serialization;
+#if NET4
 using System.Linq;
+#endif
+#if !SILVERLIGHT
 using System.Data;
+#endif
 using System.Collections.Specialized;
 
-namespace FastJSON
+namespace fastJSON
 {
     public struct Getters
     {
@@ -19,7 +23,7 @@ namespace FastJSON
         public Reflection.GenericGetter Getter;
     }
 
-    public enum PropInfoType
+    public enum myPropInfoType
     {
         Int,
         Long,
@@ -28,20 +32,23 @@ namespace FastJSON
         DateTime,
         Enum,
         Guid,
+
         Array,
         ByteArray,
         Dictionary,
         StringKeyDictionary,
         NameValue,
         StringDictionary,
+#if !SILVERLIGHT
         Hashtable,
         DataSet,
         DataTable,
+#endif
         Custom,
         Unknown,
     }
 
-    public class PropInfo
+    public class myPropInfo
     {
         public Type pt;
         public Type bt;
@@ -50,8 +57,10 @@ namespace FastJSON
         public Reflection.GenericGetter getter;
         public Type[] GenericTypes;
         public string Name;
+#if NET4
         public string memberName;
-        public PropInfoType Type;
+#endif
+        public myPropInfoType Type;
         public bool CanWrite;
 
         public bool IsClass;
@@ -63,11 +72,17 @@ namespace FastJSON
 
     public sealed class Reflection
     {
+        // Singleton pattern 4 from : http://csharpindepth.com/articles/general/singleton.aspx
+        private static readonly Reflection instance = new Reflection();
         // Explicit static constructor to tell C# compiler
         // not to mark type as beforefieldinit
-        static Reflection() { }
-        private Reflection() { }
-        public static Reflection Instance { get; } = new Reflection();
+        static Reflection()
+        {
+        }
+        private Reflection()
+        {
+        }
+        public static Reflection Instance { get { return instance; } }
 
         public static bool RDBMode = false;
 
@@ -84,7 +99,7 @@ namespace FastJSON
         private SafeDictionary<Type, CreateObject> _constrcache = new SafeDictionary<Type, CreateObject>(10);
         private SafeDictionary<Type, CreateList> _conlistcache = new SafeDictionary<Type, CreateList>(10);
         private SafeDictionary<Type, Getters[]> _getterscache = new SafeDictionary<Type, Getters[]>(10);
-        private SafeDictionary<string, Dictionary<string, PropInfo>> _propertycache = new SafeDictionary<string, Dictionary<string, PropInfo>>(10);
+        private SafeDictionary<string, Dictionary<string, myPropInfo>> _propertycache = new SafeDictionary<string, Dictionary<string, myPropInfo>>(10);
         private SafeDictionary<Type, Type[]> _genericTypes = new SafeDictionary<Type, Type[]>(10);
         private SafeDictionary<Type, Type> _genericTypeDef = new SafeDictionary<Type, Type>(10);
         private static SafeDictionary<short, OpCode> _opCodes;
@@ -93,11 +108,11 @@ namespace FastJSON
         {
             if (_opCodes != null)
                 return _opCodes.TryGetValue(code, out opCode);
-            SafeDictionary<short, OpCode> dict = new SafeDictionary<short, OpCode>();
-            foreach (FieldInfo fi in typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static))
+            var dict = new SafeDictionary<short, OpCode>();
+            foreach (var fi in typeof(OpCodes).GetFields(BindingFlags.Public | BindingFlags.Static))
             {
                 if (!typeof(OpCode).IsAssignableFrom(fi.FieldType)) continue;
-                OpCode innerOpCode = (OpCode)fi.GetValue(null);
+                var innerOpCode = (OpCode)fi.GetValue(null);
                 if (innerOpCode.OpCodeType != OpCodeType.Nternal)
                     dict.Add(innerOpCode.Value, innerOpCode);
             }
@@ -110,9 +125,15 @@ namespace FastJSON
         private static UTF8Encoding utf8 = new UTF8Encoding();
 
         // TODO : optimize utf8 
-        public static byte[] UTF8GetBytes(string str) => utf8.GetBytes(str);
+        public static byte[] UTF8GetBytes(string str)
+        {
+            return utf8.GetBytes(str);
+        }
 
-        public static string UTF8GetString(byte[] bytes, int offset, int len) => utf8.GetString(bytes, offset, len);
+        public static string UTF8GetString(byte[] bytes, int offset, int len)
+        {
+            return utf8.GetString(bytes, offset, len);
+        }
 
         public unsafe static byte[] UnicodeGetBytes(string str)
         {
@@ -125,7 +146,10 @@ namespace FastJSON
             return b;
         }
 
-        public static string UnicodeGetString(byte[] b) => UnicodeGetString(b, 0, b.Length);
+        public static string UnicodeGetString(byte[] b)
+        {
+            return UnicodeGetString(b, 0, b.Length);
+        }
 
         public unsafe static string UnicodeGetString(byte[] bytes, int offset, int buflen)
         {
@@ -146,7 +170,8 @@ namespace FastJSON
 
         internal object CreateCustom(string v, Type type)
         {
-            _customDeserializer.TryGetValue(type, out Deserialize d);
+            Deserialize d;
+            _customDeserializer.TryGetValue(type, out d);
             return d(v);
         }
 
@@ -161,12 +186,19 @@ namespace FastJSON
             }
         }
 
-        internal bool IsTypeRegistered(Type t) => _customSerializer.Count() == 0 ? false : _customSerializer.TryGetValue(t, out Serialize s);
+        internal bool IsTypeRegistered(Type t)
+        {
+            if (_customSerializer.Count() == 0)
+                return false;
+            Serialize s;
+            return _customSerializer.TryGetValue(t, out s);
+        }
         #endregion
 
         public Type GetGenericTypeDefinition(Type t)
         {
-            if (_genericTypeDef.TryGetValue(t, out Type tt))
+            Type tt = null;
+            if (_genericTypeDef.TryGetValue(t, out tt))
                 return tt;
             else
             {
@@ -178,7 +210,8 @@ namespace FastJSON
 
         public Type[] GetGenericArguments(Type t)
         {
-            if (_genericTypes.TryGetValue(t, out Type[] tt))
+            Type[] tt = null;
+            if (_genericTypes.TryGetValue(t, out tt))
                 return tt;
             else
             {
@@ -188,32 +221,35 @@ namespace FastJSON
             }
         }
 
-        public Dictionary<string, PropInfo> Getproperties(Type type, string typename, bool ShowReadOnlyProperties)
+        public Dictionary<string, myPropInfo> Getproperties(Type type, string typename, bool ShowReadOnlyProperties)
         {
-            if (_propertycache.TryGetValue(typename, out Dictionary<string, PropInfo> sd))
+            Dictionary<string, myPropInfo> sd = null;
+            if (_propertycache.TryGetValue(typename, out sd))
             {
                 return sd;
             }
             else
             {
-                sd = new Dictionary<string, PropInfo>(10);
-                BindingFlags bf = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static;
+                sd = new Dictionary<string, myPropInfo>(10);
+                var bf = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static;
                 PropertyInfo[] pr = type.GetProperties(bf);
                 foreach (PropertyInfo p in pr)
                 {
                     if (p.GetIndexParameters().Length > 0)// Property is an indexer
                         continue;
 
-                    PropInfo d = CreateMyProp(p.PropertyType, p.Name);
-                    d.setter = CreateSetMethod(type, p, ShowReadOnlyProperties);
+                    myPropInfo d = CreateMyProp(p.PropertyType, p.Name);
+                    d.setter = Reflection.CreateSetMethod(type, p, ShowReadOnlyProperties);
                     if (d.setter != null)
                         d.CanWrite = true;
-                    d.getter = CreateGetMethod(type, p);
-                    object[] att = p.GetCustomAttributes(true);
-                    foreach (object at in att)
+                    d.getter = Reflection.CreateGetMethod(type, p);
+#if NET4
+                    var att = p.GetCustomAttributes(true);
+                    foreach (var at in att)
                     {
-                        if (at is DataMemberAttribute dm)
+                        if (at is DataMemberAttribute)
                         {
+                            var dm = (DataMemberAttribute)at;
                             if (dm.Name != "")
                                 d.memberName = dm.Name;
                         }
@@ -221,23 +257,26 @@ namespace FastJSON
                     if (d.memberName != null)
                         sd.Add(d.memberName, d);
                     else
-                    sd.Add(p.Name.ToLowerInvariant(), d);
+#endif
+                        sd.Add(p.Name.ToLowerInvariant(), d);
                 }
                 FieldInfo[] fi = type.GetFields(bf);
                 foreach (FieldInfo f in fi)
                 {
-                    PropInfo d = CreateMyProp(f.FieldType, f.Name);
+                    myPropInfo d = CreateMyProp(f.FieldType, f.Name);
                     if (f.IsLiteral == false)
                     {
-                        d.setter = CreateSetField(type, f);
+                        d.setter = Reflection.CreateSetField(type, f);
                         if (d.setter != null)
                             d.CanWrite = true;
-                        d.getter = CreateGetField(type, f);
-                        object[] att = f.GetCustomAttributes(true);
-                        foreach (object at in att)
+                        d.getter = Reflection.CreateGetField(type, f);
+#if NET4
+                        var att = f.GetCustomAttributes(true);
+                        foreach (var at in att)
                         {
-                            if (at is DataMemberAttribute dm)
+                            if (at is DataMemberAttribute)
                             {
+                                var dm = (DataMemberAttribute)at;
                                 if (dm.Name != "")
                                     d.memberName = dm.Name;
                             }
@@ -245,7 +284,8 @@ namespace FastJSON
                         if (d.memberName != null)
                             sd.Add(d.memberName, d);
                         else
-                        sd.Add(f.Name.ToLowerInvariant(), d);
+#endif
+                            sd.Add(f.Name.ToLowerInvariant(), d);
                     }
                 }
 
@@ -254,35 +294,43 @@ namespace FastJSON
             }
         }
 
-        private PropInfo CreateMyProp(Type t, string name)
+        private myPropInfo CreateMyProp(Type t, string name)
         {
-            PropInfo d = new PropInfo();
-            PropInfoType d_type = PropInfoType.Unknown;
+            myPropInfo d = new myPropInfo();
+            myPropInfoType d_type = myPropInfoType.Unknown;
 
-            if (t == typeof(int) || t == typeof(int?)) d_type = PropInfoType.Int;
-            else if (t == typeof(long) || t == typeof(long?)) d_type = PropInfoType.Long;
-            else if (t == typeof(string)) d_type = PropInfoType.String;
-            else if (t == typeof(bool) || t == typeof(bool?)) d_type = PropInfoType.Bool;
-            else if (t == typeof(DateTime) || t == typeof(DateTime?)) d_type = PropInfoType.DateTime;
-            else if (t.IsEnum) d_type = PropInfoType.Enum;
-            else if (t == typeof(Guid) || t == typeof(Guid?)) d_type = PropInfoType.Guid;
-            else if (t == typeof(StringDictionary)) d_type = PropInfoType.StringDictionary;
-            else if (t == typeof(NameValueCollection)) d_type = PropInfoType.NameValue;
+            if (t == typeof(int) || t == typeof(int?)) d_type = myPropInfoType.Int;
+            else if (t == typeof(long) || t == typeof(long?)) d_type = myPropInfoType.Long;
+            else if (t == typeof(string)) d_type = myPropInfoType.String;
+            else if (t == typeof(bool) || t == typeof(bool?)) d_type = myPropInfoType.Bool;
+            else if (t == typeof(DateTime) || t == typeof(DateTime?)) d_type = myPropInfoType.DateTime;
+            else if (t.IsEnum) d_type = myPropInfoType.Enum;
+            else if (t == typeof(Guid) || t == typeof(Guid?)) d_type = myPropInfoType.Guid;
+            else if (t == typeof(StringDictionary)) d_type = myPropInfoType.StringDictionary;
+            else if (t == typeof(NameValueCollection)) d_type = myPropInfoType.NameValue;
             else if (t.IsArray)
             {
                 d.bt = t.GetElementType();
-                d_type = t == typeof(byte[]) ? PropInfoType.ByteArray : PropInfoType.Array;
+                if (t == typeof(byte[]))
+                    d_type = myPropInfoType.ByteArray;
+                else
+                    d_type = myPropInfoType.Array;
             }
             else if (t.Name.Contains("Dictionary"))
             {
-                d.GenericTypes = Instance.GetGenericArguments(t);
-                d_type = d.GenericTypes.Length > 0 && d.GenericTypes[0] == typeof(string) ? PropInfoType.StringKeyDictionary : PropInfoType.Dictionary;
+                d.GenericTypes = Reflection.Instance.GetGenericArguments(t);
+                if (d.GenericTypes.Length > 0 && d.GenericTypes[0] == typeof(string))
+                    d_type = myPropInfoType.StringKeyDictionary;
+                else
+                    d_type = myPropInfoType.Dictionary;
             }
-            else if (t == typeof(Hashtable)) d_type = PropInfoType.Hashtable;
-            else if (t == typeof(DataSet)) d_type = PropInfoType.DataSet;
-            else if (t == typeof(DataTable)) d_type = PropInfoType.DataTable;
+#if !SILVERLIGHT
+            else if (t == typeof(Hashtable)) d_type = myPropInfoType.Hashtable;
+            else if (t == typeof(DataSet)) d_type = myPropInfoType.DataSet;
+            else if (t == typeof(DataTable)) d_type = myPropInfoType.DataTable;
+#endif
             else if (IsTypeRegistered(t))
-                d_type = PropInfoType.Custom;
+                d_type = myPropInfoType.Custom;
 
             if (t.IsValueType && !t.IsPrimitive && !t.IsEnum && t != typeof(decimal))
                 d.IsStruct = true;
@@ -293,7 +341,7 @@ namespace FastJSON
             if (t.IsGenericType)
             {
                 d.IsGenericType = true;
-                d.bt = Instance.GetGenericArguments(t)[0];
+                d.bt = Reflection.Instance.GetGenericArguments(t)[0];
             }
 
             d.pt = t;
@@ -304,13 +352,20 @@ namespace FastJSON
             return d;
         }
 
-        private Type GetChangeType(Type conversionType) => conversionType.IsGenericType && conversionType.GetGenericTypeDefinition().Equals(typeof(Nullable<>))
-                ? Instance.GetGenericArguments(conversionType)[0]
-                : conversionType;
+        private Type GetChangeType(Type conversionType)
+        {
+            if (conversionType.IsGenericType && conversionType.GetGenericTypeDefinition().Equals(typeof(Nullable<>)))
+                return Reflection.Instance.GetGenericArguments(conversionType)[0];
+
+            return conversionType;
+        }
+
+        #region [   PROPERTY GET SET   ]
 
         public string GetTypeAssemblyName(Type t)
         {
-            if (_tyname.TryGetValue(t, out string val))
+            string val = "";
+            if (_tyname.TryGetValue(t, out val))
                 return val;
             else
             {
@@ -322,11 +377,13 @@ namespace FastJSON
 
         internal Type GetTypeFromCache(string typename)
         {
-            if (_typecache.TryGetValue(typename, out Type val))
+            Type val = null;
+            if (_typecache.TryGetValue(typename, out val))
                 return val;
             else
             {
                 Type t = Type.GetType(typename);
+#if NET4
                 if (RDBMode)
                 {
                     if (t == null) // RaptorDB : loading runtime assemblies
@@ -337,6 +394,7 @@ namespace FastJSON
                         }, null, true);
                     }
                 }
+#endif
                 _typecache.Add(typename, t);
                 return t;
             }
@@ -349,13 +407,17 @@ namespace FastJSON
                 int count = 10;
                 if (capacity > 10)
                     count = capacity;
-                if (_conlistcache.TryGetValue(objtype, out CreateList c))
+                CreateList c = null;
+                if (_conlistcache.TryGetValue(objtype, out c))
                 {
-                    return c != null ? c(count) : FastCreateInstance(objtype);
+                    if (c != null) // kludge : non capacity lists
+                        return c(count);
+                    else
+                        return FastCreateInstance(objtype);
                 }
                 else
                 {
-                    ConstructorInfo cinfo = objtype.GetConstructor(new Type[] { typeof(int) });
+                    var cinfo = objtype.GetConstructor(new Type[] { typeof(int) });
                     if (cinfo != null)
                     {
                         DynamicMethod dynMethod = new DynamicMethod("_fcil", objtype, new Type[] { typeof(int) }, true);
@@ -376,7 +438,7 @@ namespace FastJSON
             }
             catch (Exception exc)
             {
-                throw new Exception(String.Format("Failed to fast create instance for type '{0}' from assembly '{1}'",
+                throw new Exception(string.Format("Failed to fast create instance for type '{0}' from assembly '{1}'",
                     objtype.FullName, objtype.AssemblyQualifiedName), exc);
             }
         }
@@ -385,7 +447,8 @@ namespace FastJSON
         {
             try
             {
-                if (_constrcache.TryGetValue(objtype, out CreateObject c))
+                CreateObject c = null;
+                if (_constrcache.TryGetValue(objtype, out c))
                 {
                     return c();
                 }
@@ -404,7 +467,7 @@ namespace FastJSON
                     {
                         DynamicMethod dynMethod = new DynamicMethod("_fcis", typeof(object), null, true);
                         ILGenerator ilGen = dynMethod.GetILGenerator();
-                        LocalBuilder lv = ilGen.DeclareLocal(objtype);
+                        var lv = ilGen.DeclareLocal(objtype);
                         ilGen.Emit(OpCodes.Ldloca_S, lv);
                         ilGen.Emit(OpCodes.Initobj, objtype);
                         ilGen.Emit(OpCodes.Ldloc_0);
@@ -418,7 +481,7 @@ namespace FastJSON
             }
             catch (Exception exc)
             {
-                throw new Exception(String.Format("Failed to fast create instance for type '{0}' from assembly '{1}'",
+                throw new Exception(string.Format("Failed to fast create instance for type '{0}' from assembly '{1}'",
                     objtype.FullName, objtype.AssemblyQualifiedName), exc);
             }
         }
@@ -434,7 +497,7 @@ namespace FastJSON
 
             if (!type.IsClass) // structs
             {
-                LocalBuilder lv = il.DeclareLocal(type);
+                var lv = il.DeclareLocal(type);
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Unbox_Any, type);
                 il.Emit(OpCodes.Stloc_0);
@@ -464,11 +527,11 @@ namespace FastJSON
 
         internal static FieldInfo GetGetterBackingField(PropertyInfo autoProperty)
         {
-            MethodInfo getMethod = autoProperty.GetGetMethod();
+            var getMethod = autoProperty.GetGetMethod();
             // Restrict operation to auto properties to avoid risking errors if a getter does not contain exactly one field read instruction (such as with calculated properties).
             if (!getMethod.IsDefined(typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute), false)) return null;
 
-            byte[] byteCode = getMethod.GetMethodBody()?.GetILAsByteArray() ?? new byte[0];
+            var byteCode = getMethod.GetMethodBody()?.GetILAsByteArray() ?? new byte[0];
             //var byteCode = getMethod.GetMethodBody().GetILAsByteArray();
             int pos = 0;
             // Find the first LdFld instruction and parse its operand to a FieldInfo object.
@@ -476,7 +539,7 @@ namespace FastJSON
             {
                 // Read and parse the OpCode (it can be 1 or 2 bytes in size).
                 byte code = byteCode[pos++];
-                if (!(TryGetOpCode(code, out OpCode opCode) || pos < byteCode.Length && TryGetOpCode((short)(code * 0x100 + byteCode[pos++]), out opCode)))
+                if (!(TryGetOpCode(code, out var opCode) || pos < byteCode.Length && TryGetOpCode((short)(code * 0x100 + byteCode[pos++]), out opCode)))
                     throw new NotSupportedException("Unknown IL code detected.");
                 // If it is a LdFld, read its operand, parse it to a FieldInfo and return it.
                 if (opCode == OpCodes.Ldfld && opCode.OperandType == OperandType.InlineField && pos + sizeof(int) <= byteCode.Length)
@@ -509,7 +572,7 @@ namespace FastJSON
             {
                 if (!ShowReadOnlyProperties) return null;
                 // If the property has no setter and it is an auto property, try and create a setter for its backing field instead 
-                FieldInfo fld = GetGetterBackingField(propertyInfo);
+                var fld = GetGetterBackingField(propertyInfo);
                 return fld != null ? CreateSetField(type, fld) : null;
             }
 
@@ -521,7 +584,7 @@ namespace FastJSON
 
             if (!type.IsClass) // structs
             {
-                LocalBuilder lv = il.DeclareLocal(type);
+                var lv = il.DeclareLocal(type);
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Unbox_Any, type);
                 il.Emit(OpCodes.Stloc_0);
@@ -574,7 +637,7 @@ namespace FastJSON
 
             if (!type.IsClass) // structs
             {
-                LocalBuilder lv = il.DeclareLocal(type);
+                var lv = il.DeclareLocal(type);
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Unbox_Any, type);
                 il.Emit(OpCodes.Stloc_0);
@@ -608,7 +671,7 @@ namespace FastJSON
 
             if (!type.IsClass) // structs
             {
-                LocalBuilder lv = il.DeclareLocal(type);
+                var lv = il.DeclareLocal(type);
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Unbox_Any, type);
                 il.Emit(OpCodes.Stloc_0);
@@ -639,10 +702,11 @@ namespace FastJSON
 
         public Getters[] GetGetters(Type type, bool ShowReadOnlyProperties, List<Type> IgnoreAttributes)
         {
-            if (_getterscache.TryGetValue(type, out Getters[] val))
+            Getters[] val = null;
+            if (_getterscache.TryGetValue(type, out val))
                 return val;
 
-            BindingFlags bf = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static;
+            var bf = BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static;
             //if (ShowReadOnlyProperties)
             //    bf |= BindingFlags.NonPublic;
             PropertyInfo[] props = type.GetProperties(bf);
@@ -653,12 +717,12 @@ namespace FastJSON
                 {// Property is an indexer
                     continue;
                 }
-                if (!p.CanWrite && ShowReadOnlyProperties == false)//|| isAnonymous == false))
+                if (!p.CanWrite && (ShowReadOnlyProperties == false))//|| isAnonymous == false))
                     continue;
                 if (IgnoreAttributes != null)
                 {
                     bool found = false;
-                    foreach (Type ignoreAttr in IgnoreAttributes)
+                    foreach (var ignoreAttr in IgnoreAttributes)
                     {
                         if (p.IsDefined(ignoreAttr, false))
                         {
@@ -670,29 +734,32 @@ namespace FastJSON
                         continue;
                 }
                 string mName = null;
-                object[] att = p.GetCustomAttributes(true);
-                foreach (object at in att)
+#if NET4
+                var att = p.GetCustomAttributes(true);
+                foreach (var at in att)
                 {
-                    if (at is DataMemberAttribute dm)
+                    if (at is DataMemberAttribute)
                     {
+                        var dm = (DataMemberAttribute)at;
                         if (dm.Name != "")
                         {
                             mName = dm.Name;
                         }
                     }
                 }
+#endif
                 GenericGetter g = CreateGetMethod(type, p);
                 if (g != null)
                     getters.Add(new Getters { Getter = g, Name = p.Name, lcName = p.Name.ToLowerInvariant(), memberName = mName });
             }
 
             FieldInfo[] fi = type.GetFields(bf);
-            foreach (FieldInfo f in fi)
+            foreach (var f in fi)
             {
                 if (IgnoreAttributes != null)
                 {
                     bool found = false;
-                    foreach (Type ignoreAttr in IgnoreAttributes)
+                    foreach (var ignoreAttr in IgnoreAttributes)
                     {
                         if (f.IsDefined(ignoreAttr, false))
                         {
@@ -704,17 +771,20 @@ namespace FastJSON
                         continue;
                 }
                 string mName = null;
-                object[] att = f.GetCustomAttributes(true);
-                foreach (object at in att)
+#if NET4
+                var att = f.GetCustomAttributes(true);
+                foreach (var at in att)
                 {
-                    if (at is DataMemberAttribute dm)
+                    if (at is DataMemberAttribute)
                     {
+                        var dm = (DataMemberAttribute)at;
                         if (dm.Name != "")
                         {
                             mName = dm.Name;
                         }
                     }
                 }
+#endif
                 if (f.IsLiteral == false)
                 {
                     GenericGetter g = CreateGetField(type, f);
@@ -743,8 +813,12 @@ namespace FastJSON
 
         //    return false;
         //}
+        #endregion
 
-        internal void ResetPropertyCache() => _propertycache = new SafeDictionary<string, Dictionary<string, PropInfo>>();
+        internal void ResetPropertyCache()
+        {
+            _propertycache = new SafeDictionary<string, Dictionary<string, myPropInfo>>();
+        }
 
         internal void ClearReflectionCache()
         {
@@ -752,7 +826,7 @@ namespace FastJSON
             _typecache = new SafeDictionary<string, Type>(10);
             _constrcache = new SafeDictionary<Type, CreateObject>(10);
             _getterscache = new SafeDictionary<Type, Getters[]>(10);
-            _propertycache = new SafeDictionary<string, Dictionary<string, PropInfo>>(10);
+            _propertycache = new SafeDictionary<string, Dictionary<string, myPropInfo>>(10);
             _genericTypes = new SafeDictionary<Type, Type[]>(10);
             _genericTypeDef = new SafeDictionary<Type, Type>(10);
         }

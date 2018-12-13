@@ -1,49 +1,53 @@
 ﻿using System.Collections.Generic;
 
-namespace FastJSON
+namespace fastJSON
 {
     public sealed class SafeDictionary<TKey, TValue>
     {
-        object Mutex { get; } = new object { };
+        private readonly object _Padlock = new object();
+        private readonly Dictionary<TKey, TValue> _Dictionary;
 
-        public Dictionary<TKey, TValue> Storage { get; }
+        public SafeDictionary(int capacity)
+        {
+            _Dictionary = new Dictionary<TKey, TValue>(capacity);
+        }
 
-        public SafeDictionary(int capacity) => Storage = new Dictionary<TKey, TValue>(capacity);
-
-        public SafeDictionary() => Storage = new Dictionary<TKey, TValue>();
+        public SafeDictionary()
+        {
+            _Dictionary = new Dictionary<TKey, TValue>();
+        }
 
         public bool TryGetValue(TKey key, out TValue value)
         {
-            lock (Mutex)
-                return Storage.TryGetValue(key, out value);
+            lock (_Padlock)
+                return _Dictionary.TryGetValue(key, out value);
         }
 
         public int Count()
         {
-            lock (Mutex)
-                return Storage.Count;
+            lock (_Padlock) return _Dictionary.Count;
         }
 
         public TValue this[TKey key]
         {
             get
             {
-                lock (Mutex)
-                    return Storage[key];
+                lock (_Padlock)
+                    return _Dictionary[key];
             }
             set
             {
-                lock (Mutex)
-                    Storage[key] = value;
+                lock (_Padlock)
+                    _Dictionary[key] = value;
             }
         }
 
         public void Add(TKey key, TValue value)
         {
-            lock (Mutex)
+            lock (_Padlock)
             {
-                if (Storage.ContainsKey(key) == false)
-                    Storage.Add(key, value);
+                if (_Dictionary.ContainsKey(key) == false)
+                    _Dictionary.Add(key, value);
             }
         }
     }
