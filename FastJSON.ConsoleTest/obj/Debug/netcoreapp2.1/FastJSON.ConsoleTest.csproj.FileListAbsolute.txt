@@ -1,0 +1,14 @@
+C:\Users\alexf\Source\Repos\FastJSON\FastJSON.ConsoleTest\bin\Debug\netcoreapp2.1\FastJSON.ConsoleTest.deps.json
+C:\Users\alexf\Source\Repos\FastJSON\FastJSON.ConsoleTest\bin\Debug\netcoreapp2.1\FastJSON.ConsoleTest.runtimeconfig.json
+C:\Users\alexf\Source\Repos\FastJSON\FastJSON.ConsoleTest\bin\Debug\netcoreapp2.1\FastJSON.ConsoleTest.runtimeconfig.dev.json
+C:\Users\alexf\Source\Repos\FastJSON\FastJSON.ConsoleTest\bin\Debug\netcoreapp2.1\FastJSON.ConsoleTest.dll
+C:\Users\alexf\Source\Repos\FastJSON\FastJSON.ConsoleTest\bin\Debug\netcoreapp2.1\FastJSON.ConsoleTest.pdb
+C:\Users\alexf\Source\Repos\FastJSON\FastJSON.ConsoleTest\obj\Debug\netcoreapp2.1\FastJSON.ConsoleTest.csprojAssemblyReference.cache
+C:\Users\alexf\Source\Repos\FastJSON\FastJSON.ConsoleTest\obj\Debug\netcoreapp2.1\FastJSON.ConsoleTest.csproj.CoreCompileInputs.cache
+C:\Users\alexf\Source\Repos\FastJSON\FastJSON.ConsoleTest\obj\Debug\netcoreapp2.1\FastJSON.ConsoleTest.AssemblyInfoInputs.cache
+C:\Users\alexf\Source\Repos\FastJSON\FastJSON.ConsoleTest\obj\Debug\netcoreapp2.1\FastJSON.ConsoleTest.AssemblyInfo.cs
+C:\Users\alexf\Source\Repos\FastJSON\FastJSON.ConsoleTest\obj\Debug\netcoreapp2.1\FastJSON.ConsoleTest.dll
+C:\Users\alexf\Source\Repos\FastJSON\FastJSON.ConsoleTest\obj\Debug\netcoreapp2.1\FastJSON.ConsoleTest.pdb
+C:\Users\alexf\Source\Repos\FastJSON\FastJSON.ConsoleTest\bin\Debug\netcoreapp2.1\FastJSON.dll
+C:\Users\alexf\Source\Repos\FastJSON\FastJSON.ConsoleTest\bin\Debug\netcoreapp2.1\FastJSON.pdb
+C:\Users\alexf\Source\Repos\FastJSON\FastJSON.ConsoleTest\obj\Debug\netcoreapp2.1\FastJSON.ConsoleTest.csproj.CopyComplete

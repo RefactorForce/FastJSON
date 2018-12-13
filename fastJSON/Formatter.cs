@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace fastJSON
+namespace FastJSON
 {
     internal static class Formatter
     {
@@ -11,15 +11,12 @@ namespace fastJSON
             for (; count > 0; --count) sb.Append(_indent);
         }
 
-        public static string PrettyPrint(string input)
-        {
-            return PrettyPrint(input, "   ");
-        }
+        public static string PrettyPrint(string input) => PrettyPrint(input, "   ");
 
         public static string PrettyPrint(string input, string spaces)
         {
             _indent = spaces;
-            var output = new StringBuilder();
+            StringBuilder output = new StringBuilder { };
             int depth = 0;
             int len = input.Length;
             char[] chars = input.ToCharArray();
@@ -67,7 +64,7 @@ namespace fastJSON
                         output.Append(" : ");
                         break;
                     default:
-                        if (!char.IsWhiteSpace(ch))
+                        if (!System.Char.IsWhiteSpace(ch))
                             output.Append(ch);
                         break;
                 }

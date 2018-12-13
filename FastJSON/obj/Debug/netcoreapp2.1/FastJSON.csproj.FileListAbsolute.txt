@@ -1,0 +1,9 @@
+C:\Users\alexf\Source\Repos\FastJSON\FastJSON\bin\Debug\netcoreapp2.1\FastJSON.deps.json
+C:\Users\alexf\Source\Repos\FastJSON\FastJSON\bin\Debug\netcoreapp2.1\FastJSON.dll
+C:\Users\alexf\Source\Repos\FastJSON\FastJSON\bin\Debug\netcoreapp2.1\FastJSON.pdb
+C:\Users\alexf\Source\Repos\FastJSON\FastJSON\obj\Debug\netcoreapp2.1\FastJSON.csproj.CoreCompileInputs.cache
+C:\Users\alexf\Source\Repos\FastJSON\FastJSON\obj\Debug\netcoreapp2.1\FastJSON.AssemblyInfoInputs.cache
+C:\Users\alexf\Source\Repos\FastJSON\FastJSON\obj\Debug\netcoreapp2.1\FastJSON.AssemblyInfo.cs
+C:\Users\alexf\Source\Repos\FastJSON\FastJSON\obj\Debug\netcoreapp2.1\FastJSON.dll
+C:\Users\alexf\Source\Repos\FastJSON\FastJSON\obj\Debug\netcoreapp2.1\FastJSON.pdb
+C:\Users\alexf\Source\Repos\FastJSON\FastJSON\obj\Debug\netcoreapp2.1\FastJSON.csprojAssemblyReference.cache
